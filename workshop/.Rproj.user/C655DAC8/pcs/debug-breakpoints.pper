@@ -1,0 +1,21 @@
+{
+    "debugBreakpointsState" : {
+        "breakpoints" : [
+            {
+                "editor_line_number" : 37,
+                "editor_state" : 1,
+                "function_name" : "toplevel",
+                "function_steps" : "",
+                "id" : 3,
+                "is_package_breakpoint" : false,
+                "is_pending_debug_completion" : false,
+                "line_number" : 37,
+                "needs_updated_steps" : false,
+                "package_name" : "",
+                "path" : "~/Documents/GitHub/CSU/workshops/data/R_Spatial_Workshop_2020/modules/Module_5/do_not_open/Module_5_solutions.R",
+                "state" : 1,
+                "type" : 1
+            }
+        ]
+    }
+}

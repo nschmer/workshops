@@ -1,0 +1,32 @@
+---
+title: "R spatial Workshop"
+author: "Natalie Schmer"
+date: "1/16/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+This is a rmd for the r spatial workshop on Jan 17
+
+```{r setup, include=FALSE}
+#Load packages 
+{
+  library(animation)
+  library(car)
+  library(dismo)
+  library(geoR)
+  library(ggmap)
+  library(maps)
+  library(maptools)
+  library(mvtnorm)
+  library(raster)
+  library(rasterVis)
+  library(readxl)
+  library(rgdal)
+  library(rgeos)
+  library(SDMTools)
+  library(sp)
+  library(viridis)
+}
+```
+

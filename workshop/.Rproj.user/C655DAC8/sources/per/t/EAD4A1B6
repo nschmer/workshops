@@ -1,0 +1,29 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1579201431364.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "4270694010",
+    "id" : "EAD4A1B6",
+    "lastKnownWriteTime" : 1579293856,
+    "last_content_update" : 1579293856795,
+    "path" : "~/Documents/GitHub/CSU/workshops/workshop/rspatial_jan17.Rmd",
+    "project_path" : "rspatial_jan17.Rmd",
+    "properties" : {
+        "chunk_output_type" : "console",
+        "cursorPosition" : "30,0",
+        "disableDependencyDiscovery" : "1",
+        "last_setup_crc32" : "",
+        "scrollLine" : "19",
+        "tempName" : "Untitled1"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

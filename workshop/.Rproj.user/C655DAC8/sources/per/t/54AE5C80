@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1579300533128.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1271465479",
+    "id" : "54AE5C80",
+    "lastKnownWriteTime" : 1579303287,
+    "last_content_update" : 1579303287377,
+    "path" : "~/Documents/GitHub/CSU/workshops/data/R_Spatial_Workshop_2020/modules/Module_6/Module_6.R",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "214,2",
+        "scrollLine" : "214"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 8,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

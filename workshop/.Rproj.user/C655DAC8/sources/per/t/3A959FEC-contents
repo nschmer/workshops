@@ -1,0 +1,97 @@
+#####  
+#####  Challenge Solutions: 
+#####  
+
+# 1: Create a plot that shows how the relative intensity changes as the number of
+#    available (quadrature integration) points increases from 100 to 100,000.
+
+Q <- c(100,250,500,1000,2500,5000,10000,25000,50000,100000)
+results <- matrix(,length(Q),1)
+colnames(results) <- c("Estimate")
+
+for(i in 1:length(Q)){
+  
+  # Make new data frame with Q integration points
+  available.pt <- spsample(crithab.sf,type="regular",n=Q[i])
+  available.df <- data.frame(lc = rep(NA,length(available.pt)))
+  available.df$lc <- extract(nlcd.rl,available.pt)
+  available.df$wetland <- ifelse(available.df$lc==95,1,0)
+  available.df$used <- 0
+  all.df <- rbind(wc.df[,5:6],available.df[,2:3])
+  
+  # Fit point process model
+  ipp.model <- glm(used~wetland,data = all.df,family=binomial(link="logit"))
+  est <- deltaMethod(ipp.model,"exp(beta1)",parameterNames = c("beta0","beta1"))
+  
+  # Save results
+  results[i,] <- c(est$Estimate)
+}
+
+plot(Q,results[,1],typ="b",
+     xlab="Number of available points",
+     ylab="Relative intensity of use")
+
+
+# 2: Create a plot that shows how the relative intensity changes as the number of
+#    available (Monte Carlo integration) points increases from 100 to 100,000. 
+
+Q <- c(100,250,500,1000,2500,5000,10000,25000,50000,100000)
+results <- matrix(,length(Q),1)
+colnames(results) <- c("Estimate")
+
+for(i in 1:length(Q)){
+  
+  # Make new data frame with Q integration points
+  available.pt <- spsample(crithab.sf,type="random",n=Q[i])
+  available.df <- data.frame(lc = rep(NA,length(available.pt)))
+  available.df$lc <- extract(nlcd.rl,available.pt)
+  available.df$wetland <- ifelse(available.df$lc==95,1,0)
+  available.df$used <- 0
+  all.df <- rbind(wc.df[,5:6],available.df[,2:3])
+  
+  # Fit point process model
+  ipp.model <- glm(used~wetland,data = all.df,family=binomial(link="logit"))
+  est <- deltaMethod(ipp.model,"exp(beta1)",parameterNames = c("beta0","beta1"))
+  
+  # Save results
+  results[i,] <- c(est$Estimate)
+}
+
+plot(Q,results[,1],typ="b",
+     xlab="Number of available points",
+     ylab="Relative intensity of use")
+
+
+# 3: In the module 6 folder, there is a folder named challenge data. In
+#    this folder, there are two raster files that contain the distance 
+#    to the nearest emergent herbaceous wetlands (NLCD land cover code 95) 
+#    and the distance to the nearest cultivated crop (NLCD land cover code 82). 
+#    Use these data to construct a data frame that contains the distance to the 
+#    nearest emergent herbaceous wetlands and cultivated crop whooping crane use
+#    locations and 100,000 randomly selected available (Monte Carlo integration)
+#    points. The data frame you construct is used to fit a point process 
+#    model below in #4.
+
+
+wetdist.rl <- raster("challenge data/wetland_dist.tif")
+cropdist.rl <- raster("challenge data/crop_dist.tif")
+
+wc.df$wetdist <- extract(wetdist.rl,wc.pt)
+wc.df$cropdist <- extract(cropdist.rl,wc.pt)
+
+available.pt <- spsample(crithab.sf,type="random",n=100000)
+available.df <- data.frame(wetdist = rep(NA,length(available.pt)))
+available.df$wetdist <- extract(wetdist.rl,available.pt)
+available.df$cropdist <- extract(cropdist.rl,available.pt)
+available.df$used <- 0
+
+all.df <- rbind(wc.df[,6:8],available.df[,c(3,1,2)])
+
+
+# 4: Fit a point process model that allows the relative intensity to depend on
+#    the distance to the nearest emergent herbaceous wetlands, cultivated crop
+#    and the interaction of the two (i.e., wetland*crop).
+
+ipp.model <- glm(used~wetdist*cropdist,data = all.df,family=binomial(link="logit"))
+summary(ipp.model)
+confint.default(ipp.model)

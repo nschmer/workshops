@@ -1,0 +1,287 @@
+##################################################
+####                                          ####
+####     R Spatial Short Course, Module 6     ####
+####                                          ####
+####  Colorado Cooperative Fish and Wildlife  ####
+####              Research Unit               ####
+####                    &                     ####
+####    Department of Fish, Wildlife, and     ####
+####            Conservation Biology          ####
+####         Department of Statistics         ####
+####         Colorado State University        ####
+####                    &                     ####
+####        Department of Statistics          ####
+####         Kansas State University          ####
+####                                          ####
+##################################################
+
+#Variables not always normally distributed, normal dist gives continuos 
+#People have location of something (ex lightning, earthqukes) collect where 
+#event didn't occur (psuedo-abscences) and use a logistic regression 
+#implement a point process model from that 
+
+
+########################
+####  Demonstration ####
+########################
+
+#####
+#####  Load spatial packages
+#####
+
+library(rgdal)   # Functions to work with shapefiles and KML files
+library(sp)      # Functions to work with shapefiles and KML files
+library(raster)  # Functions for working with rasters
+library(car)     # Functions for implementing the delta method
+
+# Import shapefiles
+nebraska.sf <- readOGR(dsn = "shapefiles/nebraska.shp")
+crithab.sf <- readOGR(dsn = "shapefiles/critical habitat.shp")
+
+# Import raster data (2011 NLCD)
+# See legend at https://www.mrlc.gov/nlcd11_leg.php  
+nlcd.rl <- raster("raster/NLCD.tif")
+
+# Load location of whooping crane groups
+wc.df <- read.csv("standard data/whooping crane locations.csv")
+head(wc.df)
+
+# Plot spatial data of nebraska, land cover, critical habitat
+plot(nebraska.sf)
+plot(nlcd.rl,add=TRUE)
+plot(crithab.sf,add=TRUE)
+
+#species dist models for whooping cranes 
+
+#####
+##### Make point file
+#####
+wc.pt <- wc.df #whooping crane locations 
+coordinates(wc.pt) =~ Longitude + Latitude
+proj4string(wc.pt) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+wc.pt <- spTransform(wc.pt, crs(crithab.sf))
+
+# Plot data
+plot(nlcd.rl)
+plot(crithab.sf,add=TRUE)
+points(wc.pt,pch=20,cex=0.5)
+
+
+#####
+##### Extract habitat type at use locations
+#####
+
+# Extract NLCD land cover code
+wc.df$lc <- extract(nlcd.rl, wc.pt)
+
+# Convert land cover code into binary
+# predictor variable of presence in 
+# emergent herbaceous wetlands is 95
+wc.df$wetland <- ifelse(wc.df$lc==95, 1, 0) #1 is yes (is a wetland), 0 is no (some other habitat)
+
+# View data
+head(wc.df)
+
+# Calculate the proportion of whooping crane records
+# occurring in emergent herbaceous wetlands
+mean(wc.df$wetland) 
+
+
+#####
+##### Select the location of available (integration) points
+#####
+
+# Sample 10,000 available (quadrature integration) points
+#Rare habitats would need more sampling 
+available.pt <- spsample(crithab.sf,type="regular",n=10000)
+
+# Create a data frame for available points
+available.df <- data.frame(lc = rep(NA,length(available.pt)))
+
+
+#####
+##### Extract habitat type at available (integration) locations
+#####
+
+available.df$lc <- extract(nlcd.rl,available.pt)
+available.df$wetland <- ifelse(available.df$lc==95,1,0)
+
+mean(available.df$wetland)
+
+
+#####
+##### Make use/available data set
+#####
+
+wc.df$used <- 1
+available.df$used <- 0
+all.df <- rbind(wc.df[,5:6],available.df[,2:3])
+
+# Calculate the ratio of use/availability of 
+# emergent herbaceous wetlands
+mean(wc.df$wetland)/mean(available.df$wetland)
+
+
+#####
+##### 
+#####
+
+# Fit point process model using logistic 
+# regression approximation from:
+#
+# Warton, D. I., & Shepherd, L. C. (2010). 
+#    Poisson point process models solve the 
+#    “pseudo-absence problem” for presence-only 
+#    data in ecology. The Annals of Applied 
+#    Statistics, 4(3), 1383-1402.
+
+ipp.model <- glm(used~wetland,data = all.df,family=binomial(link="logit"))
+#Summary, estimate is positive which makes sense bc cranes should be in wetlands 
+summary(ipp.model)
+confint.default(ipp.model)
+
+# Calculate the relative intensity of use
+exp(coef(ipp.model)[2]) #12.3 x as many cranes as non-wetlands  
+
+# Calculate 95% confidence interval for the
+# relative intensity of use
+deltaMethod(ipp.model,"exp(beta1)",parameterNames = c("beta0","beta1"))
+#in a wetland, expect 7-17% more cranes 
+
+#could do a heatmap, non wetlands are 1 and wetlands are 12 
+
+####################
+#### Exercises  ####
+####################
+
+# Fit point process model using “infinitely weighted
+# logistic regression" approximation from:
+#
+# Fithian, W., & Hastie, T. (2013). Finite-sample 
+#    equivalence in statistical models for presence-only 
+#    data. The Annals of Applied Statistics, 7(4), 1917-1939.
+
+ipp.model <- glm(used~wetland,data = all.df,family=binomial(link="logit"),
+                 weights = 1000^(1-all.df$used))
+summary(ipp.model)
+confint.default(ipp.model)
+
+# Calculate the relative intensity of use
+exp(coef(ipp.model)[2]) 
+
+# Calculate 95% confidence interval for the relative intensity of use
+deltaMethod(ipp.model,"exp(beta1)",parameterNames = c("beta0","beta1"))
+
+# Change type of available points
+# Change type to "random" for Monte Carlo integration
+available.pt <- spsample(crithab.sf,type="random",n=10000)
+available.df <- data.frame(lc = rep(NA,length(available.pt)))
+available.df$lc <- extract(nlcd.rl,available.pt)
+available.df$wetland <- ifelse(available.df$lc==95,1,0)
+available.df$used <- 0
+all.df <- rbind(wc.df[,5:6],available.df[,2:3])
+
+# Refit point process model
+ipp.model <- glm(used~wetland,data = all.df,family=binomial(link="logit"))
+# Calculate 95% confidence interval for# relative intensity of use
+deltaMethod(ipp.model,"exp(beta1)",parameterNames = c("beta0","beta1"))
+
+
+##############################
+#### Challenge Questions  ####
+##############################
+
+# 1: Create a plot that shows how the relative intensity changes as the number of
+#    available (quadrature integration) points increases from 100 to 100,000.
+
+Q <- c(100, 250, 500, 1000, 2500, 5000, 10,000, 25000, 50000, 100000)
+
+results <- matrix(,length(Q),1)
+colnames(results) <- c("Estimate")
+
+for(i in 1:length(Q)){
+  
+  # Make new data frame with Q integration points
+  available.pt <- spsample(crithab.sf,type="regular",n=Q[i])
+  available.df <- data.frame(lc = rep(NA,length(available.pt)))
+  available.df$lc <- extract(nlcd.rl,available.pt)
+  available.df$wetland <- ifelse(available.df$lc==95,1,0)
+  available.df$used <- 0
+  all.df <- rbind(wc.df[,5:6],available.df[,2:3])
+  
+  # Fit point process model
+  ipp.model <- glm(used~wetland,data = all.df,family=binomial(link="logit"))
+  est <- deltaMethod(ipp.model,"exp(beta1)",parameterNames = c("beta0","beta1"))
+  
+  # Save results
+  results[i,] <- c(est$Estimate)
+}
+
+plot(Q,results[,1],typ="b",
+     xlab="Number of available points",
+     ylab="Relative intensity of use")
+
+
+# 2: Create a plot that shows how the relative intensity changes as the number of
+#    available (Monte Carlo integration) points increases from 100 to 100,000. 
+
+Q <- c(100,250,500,1000,2500,5000,10000,25000,50000,100000)
+results <- matrix(,length(Q),1)
+colnames(results) <- c("Estimate")
+
+for(i in 1:length(Q)){
+  
+  # Make new data frame with Q integration points
+  available.pt <- spsample(crithab.sf,type="random",n=Q[i])
+  available.df <- data.frame(lc = rep(NA,length(available.pt)))
+  available.df$lc <- extract(nlcd.rl,available.pt)
+  available.df$wetland <- ifelse(available.df$lc==95,1,0)
+  available.df$used <- 0
+  all.df <- rbind(wc.df[,5:6],available.df[,2:3])
+  
+  # Fit point process model
+  ipp.model <- glm(used~wetland,data = all.df,family=binomial(link="logit"))
+  est <- deltaMethod(ipp.model,"exp(beta1)",parameterNames = c("beta0","beta1"))
+  
+  # Save results
+  results[i,] <- c(est$Estimate)
+}
+
+plot(Q,results[,1],typ="b",
+     xlab="Number of available points",
+     ylab="Relative intensity of use")
+
+
+# 3: In the module 6 folder, there is a folder named challenge data. In
+#    this folder, there are two raster files that contain the distance 
+#    to the nearest emergent herbaceous wetlands (NLCD land cover code 95) 
+#    and the distance to the nearest cultivated crop (NLCD land cover code 82). 
+#    Use these data to construct a data frame that contains the distance to the 
+#    nearest emergent herbaceous wetlands and cultivated crop whooping crane use
+#    locations and 100,000 randomly selected available (Monte Carlo integration)
+#    points. The data frame you construct is used to fit a point process 
+#    model below in #4.
+
+
+wetdist.rl <- raster("challenge data/wetland_dist.tif")
+cropdist.rl <- raster("challenge data/crop_dist.tif")
+
+wc.df$wetdist <- extract(wetdist.rl,wc.pt)
+wc.df$cropdist <- extract(cropdist.rl,wc.pt)
+
+available.pt <- spsample(crithab.sf,type="random",n=100000)
+available.df <- data.frame(wetdist = rep(NA,length(available.pt)))
+available.df$wetdist <- extract(wetdist.rl,available.pt)
+available.df$cropdist <- extract(cropdist.rl,available.pt)
+available.df$used <- 0
+
+all.df <- rbind(wc.df[,6:8],available.df[,c(3,1,2)])
+
+
+# 4: Fit a point process model that allows the relative intensity to depend on
+#    the distance to the nearest emergent herbaceous wetlands, cultivated crop
+#    and the interaction of the two (i.e., wetland*crop).
+
+ipp.model <- glm(used~wetdist*cropdist,data = all.df,family=binomial(link="logit"))
+summary(ipp.model)
+confint.default(ipp.model)
